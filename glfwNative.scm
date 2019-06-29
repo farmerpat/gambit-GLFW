@@ -35,6 +35,7 @@ c-declare-end
 (c-define-type GLFWmonitor*            (pointer "GLFWmonitor"            GLFWmonitor* ))
 (c-define-type GLFWmonitor**           (pointer GLFWmonitor*))
 (c-define-type GLFWwindow*             (pointer "GLFWwindow"             GLFWwindow*))
+(c-define-type int* (pointer "int"))
 
  #|| STRUCTS ||#
 
@@ -116,7 +117,19 @@ c-declare-end
 (define glfw-native#set-window-size             (c-lambda (GLFWwindow* int int)                                  void         "glfwSetWindowSize"))
 (define glfw-native#set-window-title            (c-lambda (GLFWwindow* nonnull-UTF-8-string)                     void         "glfwSetWindowTitle"))
 
-(define glfw-native#get-window-attrib           (c-lambda (GLFWwindow* int)                                      void         "glfwGetWindowAttrib"))
+;int 	glfwGetWindowAttrib (GLFWwindow *window, int attrib)
+(define glfw-native#get-window-attrib
+  (c-lambda
+    (GLFWwindow* int)
+    int
+    "glfwGetWindowAttrib"))
+
+;void glfwGetWindowSize (GLFWwindow *window, int *width, int *height)
+(define glfw-native#get-window-size
+  (c-lambda
+    (GLFWwindow* int* int*)
+    void
+    "glfwGetWindowSize"))
 
 (define glfw-native#get-monitor                 (c-lambda (GLFWwindow*)                                          GLFWmonitor* "glfwGetWindowMonitor"))
 

@@ -46,7 +46,11 @@ gsc  -cc-options "-framework Cocoa -lglfw3 -lGLEW -framework CoreVideo -framewor
 ;; this will mainly help the event procedures to find the correct window
 ;; key is the glfw-native#window* value is a scheme glfw#window
 ;; we need the equa test checker too see if windows are equal                                            
+(display "imma make a table")
+(newline)
 (define glfw#windows (make-table test: equal?))
+(display glfw#windows)
+(newline)
 
 (define (glfw#init)
   (if (not glfw-initiated?)
@@ -77,6 +81,10 @@ gsc  -cc-options "-framework Cocoa -lglfw3 -lGLEW -framework CoreVideo -framewor
              ;; if this is a procedure all of the agruments are given an instance of the type itself
              ;; plus the extra information needed
 
+             ;; TODO
+             ;; why aren't any of these checked for #f? or just initialized with lambdas?
+             ;; and what's w/ all the weird vector ref shit instead of scheme type accessors?
+             ;; is it b/c foreign proc? probably.
              (on-close               read-only: init: #f)
              (on-refresh             read-only: init: #f)
              (on-resize              read-only: init: #f)
@@ -98,8 +106,23 @@ gsc  -cc-options "-framework Cocoa -lglfw3 -lGLEW -framework CoreVideo -framewor
 (define-macro (get-glfw-window window)
   `(if (glfw#window? ,window) (##vector-ref ,window 1) ,window)
   )
+;(define (get-glfw-window window)
+  ;(if (glfw#window? window) (##vector-ref window 1) window))
+
 (define-macro (get-scheme-window window)
   `(or (table-ref glfw#windows ,window #f) (error "Invalid glfw window")))
+;; somehow this doesn't seem to do anything
+;(break get-scheme-window)
+
+;; so get-scheme window should get a (GLFWwindow*) as a key
+;(define (get-scheme-window window)
+  ;(display "i r get-scheme-window")
+  ;(newline)
+  ;(display glfw#windows)
+  ;(newline)
+  ;(display (table-ref glfw#windows window))
+  ;(newline)
+  ;(or (table-ref glfw#windows window #f) (error "get-scheme-window" "Invalid glfw window" window)))
 
 ;; The following c-defines are what wrapps the c event listeners to scheme
 (c-define (glfw#on-close glfw-window)(GLFWwindow*) void "gambitGLFWonError" ""
@@ -158,15 +181,29 @@ gsc  -cc-options "-framework Cocoa -lglfw3 -lGLEW -framework CoreVideo -framewor
              x-offset
              y-offset
              ))#f)
+
 (c-define (glfw#on-key-press glfw-window key scancode action mods)(GLFWwindow* int int int int) void "gambitGLFWonKey" ""
-          (let ((window (get-scheme-window glfw-window)))
-            ((##vector-ref window 12)
+          (display "i r on-key-press")
+          (newline)
+          ;; wtf wont this macro work?
+
+          ;(let ((window (get-scheme-window glfw-window)))
+          (let ((window (or (##table-ref glfw#windows glfw-window #f)
+                            (error "glfw#on-key-press" "Invalid glfw window" glfw-window))))
+            (display "i got the fucking window")
+            (newline)
+            (display (##vector-ref window 12))
+            (newline)
+            (if (##vector-ref window 12)
+              ((##vector-ref window 12)
              window
              key
              scancode
              (glfw-action->symbol action)
              (if (eq? mods 0) #f (glfw-mod-key->symbol mods))
-             ))#f)
+             ))
+            )#f)
+
 (c-define (glfw#on-char-press glfw-window utf-8-integer)(GLFWwindow* int) void "gambitGLFWonCharPress" ""          
           (let ((window (get-scheme-window glfw-window)))
             ((##vector-ref window 13)
@@ -227,6 +264,8 @@ gsc  -cc-options "-framework Cocoa -lglfw3 -lGLEW -framework CoreVideo -framewor
   (##vector-set! window 11 value))
 
 (define  (glfw#window-on-key-press-set! window value)
+  (display "i r window-on-key-ress-set!")
+  (newline)
   (glfw-native#set-key-callback (glfw#window-instance window) (if value glfw#on-key-press #f))
   (##vector-set! window 12 value))
 
@@ -249,9 +288,18 @@ gsc  -cc-options "-framework Cocoa -lglfw3 -lGLEW -framework CoreVideo -framewor
              )
   ;; just as a helper we init glfw if it isn' allready so
   (or glfw-initiated? (glfw#init))
+  (display "i r make-window")
+  (newline)
   (let* ((glfw-window (glfw-native#create-window width height title monitor share))
          (window (glfw#make-window-type
                       glfw-window title)))
+
+    (display window)
+    (newline)
+    (display glfw-window)
+    (newline)
+    ;; this treats glfw-window (GLFWwindow*) as a key
+    ;; and window (glfw#window instance)
     (table-set! glfw#windows glfw-window window)
     window
     ))
